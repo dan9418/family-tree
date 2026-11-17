@@ -1,4 +1,4 @@
-const DATA_URL = "family-tree.template.json";
+const DATA_URL = "family-tree.json";
 
 const treeEl = document.querySelector("#tree");
 const titleEl = document.querySelector("#tree-title");

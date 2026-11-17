@@ -1,0 +1,24 @@
+{
+  "root": "Alex Example",
+  "parents": {
+    "Alex Example": ["Robin Example", "Casey Sample"],
+    "Blair Example": ["Robin Example", "Casey Sample"],
+    "Robin Example": ["Morgan Example", "Taylor Example"],
+    "Jamie Example": ["Morgan Example", "Taylor Example"],
+    "Casey Sample": ["Avery Sample", "Jordan Sample"],
+    "Riley Sample": ["Avery Sample", "Jordan Sample"],
+    "Quinn Example": ["Jamie Example", "Skyler Demo"],
+    "Drew Demo": ["Quinn Example", "Reese Demo"],
+    "Parker Sample": ["Riley Sample", "Finley Demo"]
+  },
+  "partners": [
+    ["Robin Example", "Casey Sample"],
+    ["Morgan Example", "Taylor Example"],
+    ["Avery Sample", "Jordan Sample"],
+    ["Jamie Example", "Skyler Demo"],
+    ["Quinn Example", "Reese Demo"],
+    ["Riley Sample", "Finley Demo"],
+    ["Blair Example", "Rowan Demo"]
+  ],
+  "details": {}
+}
