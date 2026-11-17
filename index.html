@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Family Tree</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Family Tree</p>
+          <h1 id="tree-title">Loading tree...</h1>
+        </div>
+        <div class="summary" id="tree-summary"></div>
+      </header>
+
+      <section class="tree-shell" aria-label="Family tree visualization">
+        <div class="tree" id="tree"></div>
+      </section>
+
+      <section class="details-panel" aria-label="Person details">
+        <h2>Selected Person</h2>
+        <div id="person-details" class="person-details empty">
+          Select a person in the tree to see their details.
+        </div>
+      </section>
+    </main>
+
+    <script src="family-layout.js?v=6"></script>
+    <script src="script.js?v=6"></script>
+  </body>
+</html>
