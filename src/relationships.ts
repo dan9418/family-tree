@@ -13,5 +13,6 @@ export function relationships(data: FamilyData) {
   }
   Object.entries(data.parents).forEach(([child,parents])=>add(parents,child));
   data.partners.forEach(pair=>add(pair));
+  families.forEach(family => family.children.sort());
   return {people:[...people].sort(),families:[...families.values()].sort((a,b)=>a.id.localeCompare(b.id))};
 }

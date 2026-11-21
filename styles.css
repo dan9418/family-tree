@@ -13,10 +13,24 @@
 
 .unified-viewport {
   overflow: auto;
-  max-height: 70vh;
+  height: 65vh;
+  min-height: 280px;
   background: #f5faf8;
   border: 1px solid #c7d5ce;
 }
+
+.graph-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 12px 0; }
+.graph-search { position: relative; flex: 1 1 240px; min-width: 0; }
+.search-field { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #718379; padding: 8px; }
+.search-field input { border: 0; min-width: 0; width: 100%; font: inherit; }
+.search-results { position: absolute; z-index: 10; background: white; border: 1px solid #718379; width: 100%; max-height: 240px; overflow: auto; }
+.search-results button { display: block; width: 100%; text-align: left; border: 0; padding: 10px; background: white; font: inherit; overflow-wrap: anywhere; cursor: pointer; }
+.search-results button:hover, .search-results button:focus-visible { background: #e3f0eb; }
+.search-results p { margin: 10px; }
+.graph-tool { width: 40px; height: 40px; display: grid; place-items: center; background: white; border: 1px solid #718379; border-radius: 4px; cursor: pointer; }
+.zoom-control { display: flex; align-items: center; gap: 6px; }
+.zoom-control input { width: 100px; }
+.zoom-control output { width: 44px; text-align: right; }
 
 fieldset { margin: 16px 0; border: 0; padding: 0; }
 fieldset label { margin-right: 18px; text-transform: capitalize; }
