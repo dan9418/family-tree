@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { UnifiedTree } from './UnifiedTree';
 import example from '../family-tree.template.json';
 import '../styles.css';
 
@@ -15,6 +16,7 @@ function validate(value:unknown):Data {
 }
 function App({initial}:{initial:Data}) {
   const [data,setData]=useState(initial), [selected,select]=useState(initial.root), [error,setError]=useState('');
+  const [view,setView]=useState('hybrid');
   const model=FamilyLayout.buildHybridTreeModel(data), expanded=new Set<string>();
   function PersonCard({name}:{name:string}) {
     const d=data.details?.[name];
@@ -32,7 +34,7 @@ function App({initial}:{initial:Data}) {
   }
   const d=data.details?.[selected];
   const rows={Name:selected,Born:d?.born||'Unknown',Died:d?.died||'Unknown',Parents:data.parents[selected]?.join(', ')||'Unknown',Partners:FamilyLayout.buildPartnerMap(data,{inferCoparents:true}).get(selected)?.join(', ')||'None listed',Children:Object.entries(data.parents).filter(([,p])=>p.includes(selected)).map(([n])=>n).join(', ')||'None listed',...(d?.notes?{Notes:d.notes}:{})};
-  return <main className="app"><header className="page-header"><div><p className="eyebrow">Family Tree</p><h1>{data.root}</h1></div><div className="summary">{model.people.size} people - {Object.keys(data.parents).length} parent links</div></header><label>Open JSON <input type="file" accept=".json,application/json" onChange={async e=>{const f=e.target.files?.[0];if(!f)return;try{const next=validate(JSON.parse(await f.text()));FamilyLayout.buildHybridTreeModel(next);setData(next);select(next.root);setError('');}catch(err){setError(String(err));}e.target.value='';}}/></label>{error&&<p role="alert">{error}</p>}<section className="tree-shell" aria-label="Family tree visualization"><div className="tree"><div className="hybrid-forest">{model.rootFamilies.map(family)}</div></div></section><section className="details-panel"><h2>Selected Person</h2><div className="person-details">{Object.entries(rows).map(([k,v])=><div className="detail-row" key={k}><div className="detail-label">{k}</div><div>{v}</div></div>)}</div></section></main>;
+  return <main className="app"><header className="page-header"><div><p className="eyebrow">Family Tree</p><h1>{data.root}</h1></div><div className="summary">{model.people.size} people - {Object.keys(data.parents).length} parent links</div></header><label>Open JSON <input type="file" accept=".json,application/json" onChange={async e=>{const f=e.target.files?.[0];if(!f)return;try{const next=validate(JSON.parse(await f.text()));FamilyLayout.buildHybridTreeModel(next);setData(next);select(next.root);setError('');}catch(err){setError(String(err));}e.target.value='';}}/></label>{error&&<p role="alert">{error}</p>}<fieldset><legend>Layout</legend>{['hybrid','unified'].map(mode=><label key={mode}><input type="radio" name="layout" checked={view===mode} onChange={()=>setView(mode)}/>{mode}</label>)}</fieldset>{view==='unified'?<UnifiedTree data={data} selected={selected} onSelect={select}/>:<section className="tree-shell" aria-label="Family tree visualization"><div className="tree"><div className="hybrid-forest">{model.rootFamilies.map(family)}</div></div></section>}<section className="details-panel"><h2>Selected Person</h2><div className="person-details">{Object.entries(rows).map(([k,v])=><div className="detail-row" key={k}><div className="detail-label">{k}</div><div>{v}</div></div>)}</div></section></main>;
 }
 async function start(){let data:Data=example;try{const response=await fetch('/family-tree.json',{cache:'no-store'});if(response.ok&&response.headers.get('content-type')?.includes('application/json')) data=validate(await response.json());}catch{ /* Use the fictional template when no local file is available. */ }createRoot(document.getElementById('root')!).render(<App initial={data}/>);}
 void start();
