@@ -22,6 +22,9 @@ export function UnifiedGraph({model, selected, onSelect, onSelectRelationship}: 
   const displayName = (id: string) => model.labels?.[id] || id;
   const [zoom, setZoom] = useState(1);
   const [query, setQuery] = useState('');
+  type Trace = {kind:'person'|'family';id:string};
+  const [hovered, setHovered] = useState<Trace | null>(null);
+  const [focused, setFocused] = useState<Trace | null>(null);
   const [centerRequest, requestCenter] = useState(0);
   const viewport = useRef<HTMLDivElement>(null);
   const viewer = useRef<HTMLDivElement>(null);
@@ -42,6 +45,17 @@ export function UnifiedGraph({model, selected, onSelect, onSelectRelationship}: 
   const pendingCenter = useRef<string | null>(null);
   const layout = useMemo(() => unifiedLayout(model), [model]);
   const {nodes, edges, width, height} = layout;
+  const strokes = useMemo(() => displayEdges(edges), [edges]);
+  const trace = hovered || focused;
+  const tracedGroups = layout.parentGroups.filter(group => trace && (trace.kind === 'person'
+    ? group.parents.includes(trace.id) || group.children.includes(trace.id)
+    : group.partnershipId === trace.id));
+  const groupIds = new Set(tracedGroups.map(group => group.id));
+  const familyIds = new Set(tracedGroups.flatMap(group => group.partnershipId ? [group.partnershipId] : []));
+  if(trace?.kind === 'family') familyIds.add(trace.id);
+  if(trace?.kind === 'person') model.families.filter(f => f.parents.includes(trace.id) || f.children.includes(trace.id)).forEach(f => familyIds.add(f.id));
+  const highlighted = trace ? displayEdges(edges.filter(edge => groupIds.has(edge.groupId || '') || familyIds.has(edge.relationshipId || ''))) : [];
+  useEffect(() => {setHovered(null); setFocused(null);}, [model]);
 
   useLayoutEffect(() => {
     if (!pendingCenter.current || !viewport.current) return;
@@ -99,12 +113,20 @@ export function UnifiedGraph({model, selected, onSelect, onSelectRelationship}: 
       <div style={{width: width * zoom, height: height * zoom, position: 'relative', overflow: 'hidden'}}>
         <div style={{position: 'relative', width, height, transform: `scale(${zoom})`, transformOrigin: 'top left'}}>
           <svg width={width} height={height} style={{position: 'absolute', inset: 0}} aria-hidden="true">
-            {displayEdges(edges).map(edge => <polyline key={edge.id} data-edge-kind={edge.kind} points={edge.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke={edge.kind==='partner'?'#b56344':'#427385'} strokeDasharray={edge.kind==='partner'?'6 3':undefined} strokeWidth={2}/>)}
+            <g opacity={highlighted.length ? 0.18 : 1}>
+            {strokes.map(edge => <polyline key={edge.id} data-edge-kind={edge.kind} points={edge.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke={edge.kind==='partner'?'#b56344':'#427385'} strokeDasharray={edge.kind==='partner'?'6 3':undefined} strokeWidth={2}/>)}
+            </g>
+            {highlighted.map(edge => <polyline key={'halo:'+edge.id} pointerEvents="none" points={edge.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke="#f5faf8" strokeWidth={7} vectorEffect="non-scaling-stroke"/>)}
+            {highlighted.map(edge => <g key={edge.id} data-highlighted-edge={edge.kind} pointerEvents="none">
+              <polyline points={edge.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke={edge.kind==='partner'?'#a74720':'#175b76'} strokeDasharray={edge.kind==='partner'?'6 3':undefined} strokeWidth={3} vectorEffect="non-scaling-stroke"/>
+            </g>)}
           </svg>
           {model.families.map(family => {
             const point = nodes.get('f:' + family.id);
             if(!point) return null;
             if (family.parents.length>1) return <div key={family.id} className="relationship-node" data-relationship-id={family.id}
+              onMouseEnter={() => setHovered({kind:'family',id:family.id})} onMouseLeave={() => setHovered(null)}
+              onFocus={() => setFocused({kind:'family',id:family.id})} onBlur={() => setFocused(null)}
               title={(family.events || []).join('\n')}
               role={onSelectRelationship ? 'button' : undefined} tabIndex={onSelectRelationship ? 0 : undefined}
               aria-label={onSelectRelationship ? `Edit partnership: ${family.parents.map(displayName).join(' + ')}` : undefined}
@@ -118,6 +140,8 @@ export function UnifiedGraph({model, selected, onSelect, onSelectRelationship}: 
           {model.people.map(name => {
             const point = nodes.get('p:' + name)!;
             return <button type="button" key={name} data-person-id={name} className={`person-card${selected === name ? ' selected' : ''}`} aria-pressed={selected === name}
+              onMouseEnter={() => setHovered({kind:'person',id:name})} onMouseLeave={() => setHovered(null)}
+              onFocus={() => setFocused({kind:'person',id:name})} onBlur={() => setFocused(null)}
               style={{position: 'absolute', left: point.x - 92, top: point.y - 50, width: 184, height: 100, overflow: 'auto'}} onClick={() => onSelect(name)}>
               <span className="person-name">{displayName(name)}</span>
               {model.years?.[name] && <span className="person-years">{model.years[name]}</span>}

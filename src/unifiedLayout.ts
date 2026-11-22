@@ -3,7 +3,7 @@ import type {RelationshipGraph} from './relationships';
 
 type Point = {x:number;y:number};
 type Box = Point & {width:number;height:number};
-export type RoutedEdge = {id:string;kind:'partner'|'parent';points:Point[];groupId?:string};
+export type RoutedEdge = {id:string;kind:'partner'|'parent';points:Point[];groupId?:string;relationshipId?:string};
 export type ParentGroup = {id:string;parents:string[];children:string[];partnershipId?:string};
 
 export function parentGroups(model: RelationshipGraph): ParentGroup[] {
@@ -151,7 +151,7 @@ export function unifiedLayout(model: RelationshipGraph) {
       f.children.forEach(c=>graph.setEdge('f:'+f.id,'p:'+c,{kind:'parent'}));
     });
     dagre.layout(graph);
-    return {parentGroups:ancestryGroups,nodes:new Map(graph.nodes().map(id=>[id,graph.node(id) as Box])),edges:graph.edges().map(e=>({id:JSON.stringify(e),kind:graph.edge(e).kind as 'parent'|'partner',points:graph.edge(e).points as Point[]})),width:graph.graph().width||100,height:graph.graph().height||100};
+    return {parentGroups:ancestryGroups,nodes:new Map(graph.nodes().map(id=>[id,graph.node(id) as Box])),edges:graph.edges().map((e):RoutedEdge=>({id:JSON.stringify(e),relationshipId:(e.v.startsWith('f:')?e.v:e.w).slice(2),kind:graph.edge(e).kind as 'parent'|'partner',points:graph.edge(e).points as Point[]})),width:graph.graph().width||100,height:graph.graph().height||100};
   }
   dagre.layout(outer);
   // Reserve enough vertical space for the busiest ancestry tier; lanes never wrap.
@@ -179,7 +179,7 @@ export function unifiedLayout(model: RelationshipGraph) {
       const group=outer.node(find(parent));
       const index=couples.filter(f=>find(f.parents[0])===find(parent)).findIndex(f=>f.id===family.id);
       const lane=group.y-group.height/2+10+index*14;
-      edges.push({id:JSON.stringify(['partner',family.id,parent]),kind:'partner',points:obstructed?[start,{x:start.x+direction*10,y:start.y},{x:start.x+direction*10,y:lane},{x:end.x-direction*10,y:lane},{x:end.x-direction*10,y:end.y},end]:[start,end]});
+      edges.push({id:JSON.stringify(['partner',family.id,parent]),kind:'partner',relationshipId:family.id,points:obstructed?[start,{x:start.x+direction*10,y:start.y},{x:start.x+direction*10,y:lane},{x:end.x-direction*10,y:lane},{x:end.x-direction*10,y:end.y},end]:[start,end]});
     });
   });
   const groupByChild=new Map(ancestryGroups.flatMap(group=>group.children.map(child=>[child,group] as const)));

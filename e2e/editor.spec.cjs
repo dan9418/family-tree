@@ -1,6 +1,25 @@
 const {test, expect} = require('@playwright/test');
 const fs = require('node:fs');
 
+test('hover and keyboard focus trace connected families without opening the editor', async ({page}, testInfo) => {
+  await page.goto('/?demo');
+  const person=page.locator('[data-person-id="alex"]');
+  await person.hover();
+  await expect(page.locator('[data-highlighted-edge="parent"]')).not.toHaveCount(0);
+  await expect(page.locator('[data-highlighted-edge="partner"]')).toHaveCount(2);
+  await expect(page.getByRole('dialog')).not.toBeVisible();
+  await page.screenshot({path:testInfo.outputPath('hover.png'),fullPage:true});
+  await page.getByRole('heading',{name:'Family document',exact:true}).hover();
+  await expect(page.locator('[data-highlighted-edge]')).toHaveCount(0);
+  await person.focus();
+  await expect(page.locator('[data-highlighted-edge="parent"]')).not.toHaveCount(0);
+  await page.getByRole('button',{name:'Fit entire tree',exact:true}).focus();
+  await expect(page.locator('[data-highlighted-edge]')).toHaveCount(0);
+  await page.locator('[data-relationship-id="couple-alex-robin"]').hover();
+  await expect(page.locator('[data-highlighted-edge="partner"]')).toHaveCount(2);
+  await expect(page.locator('[data-highlighted-edge="parent"]')).toHaveCount(0);
+});
+
 test('siblings share one clean ancestry connector', async ({page}, testInfo) => {
   await page.goto('/?demo');
   const gx='http://gedcomx.org/';
