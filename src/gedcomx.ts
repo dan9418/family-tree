@@ -1,7 +1,7 @@
 export const GX = 'http://gedcomx.org/';
 type Extra = {[key: string]: unknown};
 export type Fact = Extra & {type: string; date?: Extra & {original?: string}};
-export type Person = Extra & {id: string; names?: (Extra & {nameForms?: (Extra & {fullText?: string})[]})[]};
+export type Person = Extra & {id: string; facts?: Fact[]; names?: (Extra & {nameForms?: (Extra & {fullText?: string})[]})[]};
 export type Relationship = Extra & {id: string; type: string; person1: Extra & {resource: string}; person2: Extra & {resource: string}; facts?: Fact[]};
 export type Gedcomx = Extra & {persons: Person[]; relationships: Relationship[]};
 
@@ -19,6 +19,13 @@ export function parseGedcomx(text: string): Gedcomx {
     ids.add(item.id);
   }
   const people = new Set(data.persons.map(p => p.id));
+  for (const item of [...data.persons, ...data.relationships]) {
+    if (item.facts !== undefined && (!Array.isArray(item.facts) || item.facts.some((fact: unknown) => {
+      if (!object(fact) || typeof fact.type !== 'string') return true;
+      const date = fact.date;
+      return date !== undefined && (!object(date) || ['original', 'formal'].some(key => date[key] !== undefined && typeof date[key] !== 'string'));
+    }))) throw Error('Invalid facts.');
+  }
   for (const person of data.persons) {
     if (person.names !== undefined && (!Array.isArray(person.names) || person.names.some((name: unknown) => !object(name) || (name.nameForms !== undefined && (!Array.isArray(name.nameForms) || name.nameForms.some((form: unknown) => !object(form) || (form.fullText !== undefined && typeof form.fullText !== 'string'))))))) throw Error('Invalid person names.');
   }
@@ -38,6 +45,31 @@ export function serializeGedcomx(data: Gedcomx) {
   return text;
 }
 export function personName(person: Person) { return person.names?.[0]?.nameForms?.[0]?.fullText || person.id; }
+export function personDate(person: Person, type: 'Birth' | 'Death'): string {
+  const date = person.facts?.find(f => f.type === GX + type)?.date;
+  return date?.original ?? (typeof date?.formal === 'string' ? date.formal : '');
+}
+export function updatePersonDates(data: Gedcomx, id: string, birth: string, death: string): Gedcomx {
+  const next = structuredClone(data);
+  const person = next.persons.find(p => p.id === id);
+  if (!person) throw Error('Person not found.');
+  for (const [type, input] of [['Birth', birth], ['Death', death]] as const) {
+    if (input === personDate(person, type)) continue;
+    const value = input.trim();
+    const matches = person.facts?.filter(f => f.type === GX + type) || [];
+    if (matches.length > 1) throw Error(`Multiple ${type.toLowerCase()} facts exist; resolve the conflicting facts before editing this date.`);
+    let fact = matches[0];
+    if (!fact && !value) continue;
+    if (!fact) {fact = {type: GX + type}; (person.facts ??= []).push(fact);}
+    // Preserve fact metadata, but discard the old formal date when its text changes.
+    const date = {...fact.date};
+    delete date.original; delete date.formal;
+    if (value) date.original = value;
+    if (Object.keys(date).length) fact.date = date;
+    else delete fact.date;
+  }
+  return next;
+}
 export function renamePerson(data: Gedcomx, id: string, name: string): Gedcomx {
   if (!name.trim()) throw Error('Name cannot be empty.');
   const next = structuredClone(data);

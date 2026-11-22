@@ -1,6 +1,42 @@
 const {test, expect} = require('@playwright/test');
 const fs = require('node:fs');
 
+test('person dates edit, undo, discard, and file round trip', async ({page}, testInfo) => {
+  await page.goto('/?demo');
+  const alex = page.locator('[data-person-id="alex"]');
+  await alex.click();
+  await page.getByLabel('Birth date', {exact:true}).fill('1950');
+  await page.getByLabel('Death date', {exact:true}).fill('2026');
+  await page.getByRole('button',{name:'Apply dates',exact:true}).click();
+  await expect(alex).toContainText('1950-2026');
+  await page.getByRole('button',{name:'Close editor'}).click();
+  await page.getByRole('button',{name:'Undo last applied change'}).click();
+  await expect(alex).not.toContainText('1950');
+  await alex.click();
+  await expect(page.getByLabel('Birth date',{exact:true})).toHaveValue('');
+  await page.getByLabel('Birth date',{exact:true}).fill('1950');
+  await page.getByLabel('Death date',{exact:true}).fill('2026');
+  await page.getByRole('button',{name:'Apply dates',exact:true}).click();
+  await page.getByLabel('Birth date',{exact:true}).fill('1900');
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button',{name:'Close editor'}).click();
+  await expect(alex).toContainText('1950-2026');
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button',{name:'Save copy'}).click();
+  const saved = testInfo.outputPath('fictional-dates.json');
+  await (await downloadPromise).saveAs(saved);
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('input[type=file]').setInputFiles(saved);
+  await alex.click();
+  await expect(page.getByLabel('Birth date',{exact:true})).toHaveValue('1950');
+  await expect(page.getByLabel('Death date',{exact:true})).toHaveValue('2026');
+  await page.getByLabel('Death date',{exact:true}).fill('');
+  await page.getByRole('button',{name:'Apply dates',exact:true}).click();
+  await expect(alex).toContainText('1950-?');
+  await page.getByLabel('Person',{exact:true}).selectOption('robin');
+  await expect(page.getByLabel('Birth date',{exact:true})).toHaveValue('');
+});
+
 test('year labels, compact partnerships, and fullscreen viewer', async ({page}) => {
   await page.goto('/?demo');
   const data = {persons:[
