@@ -1,5 +1,6 @@
-import {useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {Focus, Maximize, Search} from 'lucide-react';
+import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {Focus, Maximize, Search, Expand, Shrink} from 'lucide-react';
+import {dateYear} from './years';
 import {unifiedLayout} from './unifiedLayout';
 import {relationships, type FamilyData, type RelationshipGraph} from './relationships';
 
@@ -12,16 +13,32 @@ export function UnifiedTree({data, selected, onSelect}: {
   return <UnifiedGraph model={model} selected={selected} onSelect={onSelect}/>;
 }
 
-export function UnifiedGraph({model, selected, onSelect}: {
+export function UnifiedGraph({model, selected, onSelect, onSelectRelationship}: {
   model: RelationshipGraph;
   selected: string;
   onSelect: (id: string) => void;
+  onSelectRelationship?: (id: string) => void;
 }) {
   const displayName = (id: string) => model.labels?.[id] || id;
   const [zoom, setZoom] = useState(1);
   const [query, setQuery] = useState('');
   const [centerRequest, requestCenter] = useState(0);
   const viewport = useRef<HTMLDivElement>(null);
+  const viewer = useRef<HTMLDivElement>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState('');
+  useEffect(() => {
+    const changed = () => setFullscreen(document.fullscreenElement === viewer.current);
+    document.addEventListener('fullscreenchange', changed);
+    return () => document.removeEventListener('fullscreenchange', changed);
+  }, []);
+  async function toggleFullscreen() {
+    try {
+      setFullscreenError('');
+      if (document.fullscreenElement === viewer.current) await document.exitFullscreen();
+      else await viewer.current?.requestFullscreen();
+    } catch {setFullscreenError('Fullscreen is unavailable in this browser.');}
+  }
   const pendingCenter = useRef<string | null>(null);
   const layout = useMemo(() => unifiedLayout(model), [model]);
   const {nodes, edges, width, height} = layout;
@@ -51,7 +68,7 @@ export function UnifiedGraph({model, selected, onSelect}: {
     ? model.people.filter(name => displayName(name).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
     : [];
 
-  return <>
+  return <div className="tree-viewer" ref={viewer}>
     <div className="graph-toolbar">
       <div className="graph-search">
         <label className="search-field"><Search size={18} aria-hidden="true"/>
@@ -75,7 +92,9 @@ export function UnifiedGraph({model, selected, onSelect}: {
       </label>
       <button type="button" className="graph-tool" title="Center selected person" aria-label="Center selected person" onClick={() => center(selected)}><Focus size={20}/></button>
       <button type="button" className="graph-tool" title="Fit entire tree" aria-label="Fit entire tree" onClick={fit}><Maximize size={20}/></button>
+      <button type="button" className="graph-tool" title={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} onClick={toggleFullscreen}>{fullscreen ? <Shrink size={20}/> : <Expand size={20}/>}</button>
     </div>
+    {fullscreenError && <p role="alert">{fullscreenError}</p>}
     <div className="unified-viewport" ref={viewport} tabIndex={0} aria-label="Unified family tree">
       <div style={{width: width * zoom, height: height * zoom, position: 'relative', overflow: 'hidden'}}>
         <div style={{position: 'relative', width, height, transform: `scale(${zoom})`, transformOrigin: 'top left'}}>
@@ -86,9 +105,13 @@ export function UnifiedGraph({model, selected, onSelect}: {
             const point = nodes.get('f:' + family.id);
             if(!point) return null;
             if (family.parents.length>1) return <div key={family.id} className="relationship-node" data-relationship-id={family.id}
+              title={(family.events || []).join('\n')}
+              role={onSelectRelationship ? 'button' : undefined} tabIndex={onSelectRelationship ? 0 : undefined}
+              aria-label={onSelectRelationship ? `Edit partnership: ${family.parents.map(displayName).join(' + ')}` : undefined}
+              onClick={() => onSelectRelationship?.(family.id)} onKeyDown={event => {if(onSelectRelationship && (event.key==='Enter'||event.key===' ')){event.preventDefault();onSelectRelationship(family.id);}}}
               style={{position:'absolute',left:point.x-point.width/2,top:point.y-point.height/2,width:point.width,height:point.height,overflow:'auto'}}>
               <strong>{family.label}</strong>
-              {family.events?.map((event,index) => <div key={index}>{event}</div>)}
+              <div className="partnership-years">{family.events?.length ? family.events.map(event => dateYear(event) || '?').join(' / ') : 'Year unknown'}</div>
             </div>;
             return <span key={family.id} data-relationship-id={family.id} title={[family.label,...(family.events||[])].join(' · ')} style={{position: 'absolute', left: point.x - 4, top: point.y - 4, width: 8, height: 8, borderRadius: '50%', background: '#427385'}}/>;
           })}
@@ -97,10 +120,11 @@ export function UnifiedGraph({model, selected, onSelect}: {
             return <button type="button" key={name} data-person-id={name} className={`person-card${selected === name ? ' selected' : ''}`} aria-pressed={selected === name}
               style={{position: 'absolute', left: point.x - 92, top: point.y - 50, width: 184, height: 100, overflow: 'auto'}} onClick={() => onSelect(name)}>
               <span className="person-name">{displayName(name)}</span>
+              {model.years?.[name] && <span className="person-years">{model.years[name]}</span>}
             </button>;
           })}
         </div>
       </div>
     </div>
-  </>;
+  </div>;
 }

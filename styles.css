@@ -42,6 +42,13 @@
 .relationship-node { background: #edf4f1; border: 1px solid #718379; padding: 8px; font-size: .85rem; overflow-wrap: anywhere; }
 .relationship-node strong { display: block; margin-bottom: 6px; }
 .relationship-node div { margin-top: 6px; }
+.relationship-node[role=button] { cursor: pointer; }
+.relationship-node[role=button]:focus-visible { outline: 3px solid #427385; outline-offset: 3px; }
+.edit-dialog { width: min(900px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid #718379; border-radius: 8px; padding: 24px; background: #fff; color: var(--ink); }
+.edit-dialog::backdrop { background: rgb(20 35 30 / 45%); }
+.dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.dialog-header h2 { margin: 0; }
+.edit-dialog:not([open]) { display: none; }
 
 fieldset { margin: 16px 0; border: 0; padding: 0; }
 fieldset label { margin-right: 18px; text-transform: capitalize; }
@@ -391,3 +398,16 @@ h2 {
     right: 76px;
   }
 }
+.tree-viewer:fullscreen {
+  display: flex;
+  flex-direction: column;
+  background: #f5faf8;
+  padding: 16px;
+  width: 100%;
+  height: 100%;
+}
+.tree-viewer:fullscreen .unified-viewport { flex: 1; min-height: 0; height: auto; }
+.unified-viewport .person-card { flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 6px; }
+.person-years { display: block; font-size: 13px; color: #526660; }
+.unified-viewport .relationship-node { text-align: center; padding: 8px; font-size: 12px; }
+.partnership-years { font-size: 12px; }

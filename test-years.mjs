@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {dateYear, lifeYears} from './src/years.ts';
+const fact = (type, date) => ({type:`http://gedcomx.org/${type}`, date:{original:date}});
+assert.equal(lifeYears([fact('Birth','1950'),fact('Death','22 NOV 2026')]), '1950-2026');
+assert.equal(lifeYears([fact('Birth','1950')]), '1950-?');
+assert.equal(lifeYears([fact('Death','2026')]), '?-2026');
+assert.equal(lifeYears(undefined), '');
+assert.equal(dateYear('BET 1950 AND 1952'), '');
+assert.equal(dateYear('about 1950'), 'c. 1950');
+assert.equal(dateYear('+1950-01-02'), '1950');
+console.log('Year label checks passed.');

@@ -1,11 +1,13 @@
 import {GX, personName, type Gedcomx} from './gedcomx';
 import type {RelationshipGraph} from './relationships';
+import {lifeYears} from './years';
 
 // Parent-child assertions stay independent of couple history: no inferred parentage.
 export function gedcomxGraph(data: Gedcomx): RelationshipGraph {
   return {
     people: data.persons.map(p => p.id).sort(),
     labels: Object.fromEntries(data.persons.map(p => [p.id, personName(p)])),
+    years: Object.fromEntries(data.persons.map(p => [p.id, lifeYears(p.facts)])),
     families: data.relationships.filter(r => r.type === GX + 'Couple' || r.type === GX + 'ParentChild')
       .map(r => ({
         id: r.id,

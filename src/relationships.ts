@@ -2,6 +2,7 @@ export type FamilyData = { root: string; parents: Record<string, string[]>; part
 export type RelationshipGraph = {
   people: string[];
   labels?: Record<string, string>;
+  years?: Record<string, string>;
   families: {id: string; parents: string[]; children: string[]; label?: string; events?: string[]}[];
 };
 export function relationships(data: FamilyData) {

@@ -31,12 +31,12 @@ export function unifiedLayout(model: RelationshipGraph) {
       }
     }
     people.forEach(visit);
-    const height=Math.max(100,...groupCouples.map(f=>44+(f.events?.length||0)*28));
+    const height=100;
     const top=30+groupCouples.length*14;
     let x=0;
     for(const id of sequence) {
-      const width=id.startsWith('p:')?184:200;
-      positions.set(id,{x:x+width/2,y:top+height/2,width,height:id.startsWith('p:')?100:height});
+      const width=id.startsWith('p:')?184:140;
+      positions.set(id,{x:x+width/2,y:top+height/2,width,height:id.startsWith('p:')?100:72});
       x+=width+28;
     }
     local.set(key,positions);
@@ -53,7 +53,7 @@ export function unifiedLayout(model: RelationshipGraph) {
     graph.setDefaultEdgeLabel(()=>({}));
     model.people.forEach(id=>graph.setNode('p:'+id,{width:184,height:100}));
     model.families.forEach(f=>{
-      graph.setNode('f:'+f.id,{width:f.parents.length>1?200:10,height:f.parents.length>1?100+(f.events?.length||0)*28:10});
+      graph.setNode('f:'+f.id,{width:f.parents.length>1?140:10,height:f.parents.length>1?72:10});
       f.parents.forEach(p=>graph.setEdge('p:'+p,'f:'+f.id,{kind:f.children.length?'parent':'partner'}));
       f.children.forEach(c=>graph.setEdge('f:'+f.id,'p:'+c,{kind:'parent'}));
     });

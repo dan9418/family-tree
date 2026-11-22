@@ -2,7 +2,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {UnifiedGraph} from './UnifiedTree';
 import {gedcomxGraph} from './gedcomxGraph';
 import {createRoot} from 'react-dom/client';
-import {Download, FolderOpen, Undo2} from 'lucide-react';
+import {Download, FolderOpen, Undo2, X} from 'lucide-react';
 import {addCoupleEvent, fictionalDocument, GX, parseGedcomx, personName, renamePerson, serializeGedcomx, type Gedcomx} from './gedcomx';
 import '../styles.css';
 
@@ -19,6 +19,27 @@ function Editor({initial, initialFilename}: {initial: Gedcomx; initialFilename: 
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const openInput = useRef<HTMLInputElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const eventInput = useRef<HTMLSelectElement>(null);
+  function closeDialog() {
+    if ((name !== personName(person) || date.trim()) && !window.confirm('Discard unapplied edits?')) return;
+    setName(personName(person)); setDate(''); setError('');
+    dialog.current?.close();
+  }
+  function openPerson(id: string) {
+    selectPerson(id);
+    dialog.current?.showModal();
+    nameInput.current?.focus();
+  }
+  function openPartnership(id: string) {
+    const couple = data.relationships.find(r => r.id === id);
+    if(!couple) return;
+    selectPerson(couple.person1.resource.slice(1));
+    setRelationshipId(id);
+    dialog.current?.showModal();
+    eventInput.current?.focus();
+  }
   const person = data.persons.find(p => p.id === selected)!;
   const dirty = serializeGedcomx(data) !== baseline || name !== personName(person);
   const couples = data.relationships.filter(r => r.type === GX + 'Couple');
@@ -74,22 +95,26 @@ function Editor({initial, initialFilename}: {initial: Gedcomx; initialFilename: 
     </div>
     {error && <p role="alert" className="error">{error}</p>}
     <p role="status">{message}</p>
+    <dialog ref={dialog} className="edit-dialog" aria-labelledby="edit-dialog-title" onCancel={event => {event.preventDefault();closeDialog();}}>
+    <header className="dialog-header"><h2 id="edit-dialog-title">Edit family details</h2><button type="button" title="Close editor" aria-label="Close editor" onClick={closeDialog}><X size={20}/></button></header>
+    {error && <p role="alert" className="error">{error}</p>}
     <div className="gx-columns">
       <section><h2>Person</h2>
         <label>Person<select value={selected} onChange={event => selectPerson(event.target.value)}>{data.persons.map(p => <option key={p.id} value={p.id}>{personName(p)} ({p.id})</option>)}</select></label>
-        <form onSubmit={event => {event.preventDefault(); applyName();}}><label>Name<input value={name} required onChange={event => setName(event.target.value)}/></label><button type="submit" disabled={name === personName(person)}>Apply name</button></form>
+        <form onSubmit={event => {event.preventDefault(); applyName();}}><label>Name<input ref={nameInput} value={name} required onChange={event => setName(event.target.value)}/></label><button type="submit" disabled={name === personName(person)}>Apply name</button></form>
       </section>
       <section><h2>Partnership history</h2>
         <label>Couple<select value={relationshipId} onChange={event => setRelationshipId(event.target.value)} disabled={!couples.length}>{!couples.length && <option value="">No couples recorded</option>}{couples.map(r => <option key={r.id} value={r.id}>{resolveName(r.person1.resource)} + {resolveName(r.person2.resource)} ({r.id})</option>)}</select></label>
         <ol>{relationship?.facts?.map((fact, index) => <li key={index}>{fact.type.startsWith(GX) ? fact.type.slice(GX.length) : fact.type}: {fact.date?.original || 'Date unknown'}</li>)}</ol>
         <form onSubmit={event => {event.preventDefault(); try {change(addCoupleEvent(data, relationshipId, eventType, date));setDate('');} catch(e) {setError(String(e));}}}>
-          <label>Event<select value={eventType} onChange={event => setEventType(event.target.value as 'Marriage' | 'Divorce')}><option>Marriage</option><option>Divorce</option></select></label>
+          <label>Event<select ref={eventInput} value={eventType} onChange={event => setEventType(event.target.value as 'Marriage' | 'Divorce')}><option>Marriage</option><option>Divorce</option></select></label>
           <label>Date<input value={date} placeholder="e.g. 2000 or about June 2000" onChange={event => setDate(event.target.value)}/></label>
           <button type="submit" disabled={!relationship}>Add event</button>
         </form>
       </section>
     </div>
-    <section aria-label="Document tree"><h2>Family tree</h2><UnifiedGraph model={graph} selected={selected} onSelect={selectPerson}/></section>
+    </dialog>
+    <section aria-label="Document tree"><h2>Family tree</h2><UnifiedGraph model={graph} selected={selected} onSelect={openPerson} onSelectRelationship={openPartnership}/></section>
   </main>;
 }
 async function startEditor() {
