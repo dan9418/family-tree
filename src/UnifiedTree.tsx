@@ -1,6 +1,6 @@
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {Focus, Maximize, Search} from 'lucide-react';
-import dagre from '@dagrejs/dagre';
+import {unifiedLayout} from './unifiedLayout';
 import {relationships, type FamilyData, type RelationshipGraph} from './relationships';
 
 export function UnifiedTree({data, selected, onSelect}: {
@@ -23,32 +23,18 @@ export function UnifiedGraph({model, selected, onSelect}: {
   const [centerRequest, requestCenter] = useState(0);
   const viewport = useRef<HTMLDivElement>(null);
   const pendingCenter = useRef<string | null>(null);
-  const layout = useMemo(() => {
-    const g = new dagre.graphlib.Graph();
-    g.setGraph({rankdir: 'TB', nodesep: 35, ranksep: 55, marginx: 25, marginy: 25});
-    g.setDefaultEdgeLabel(() => ({}));
-    model.people.forEach(name => g.setNode('p:' + name, {width: 184, height: 100}));
-    model.families.forEach(family => {
-      const id = 'f:' + family.id;
-      g.setNode(id, {width: family.label ? 240 : 12, height: family.label ? 44 + (family.events?.length || 0) * 44 : 12});
-      family.parents.forEach(name => g.setEdge('p:' + name, id));
-      family.children.forEach(name => g.setEdge(id, 'p:' + name));
-    });
-    dagre.layout(g);
-    return {model, g};
-  }, [model]);
-  const {g} = layout;
-  const width = g.graph().width || 100, height = g.graph().height || 100;
+  const layout = useMemo(() => unifiedLayout(model), [model]);
+  const {nodes, edges, width, height} = layout;
 
   useLayoutEffect(() => {
     if (!pendingCenter.current || !viewport.current) return;
-    const point = g.node('p:' + pendingCenter.current);
+    const point = nodes.get('p:' + pendingCenter.current);
     pendingCenter.current = null;
     if (point) viewport.current.scrollTo({
       left: point.x * zoom - viewport.current.clientWidth / 2,
       top: point.y * zoom - viewport.current.clientHeight / 2
     });
-  }, [g, zoom, centerRequest]);
+  }, [nodes, zoom, centerRequest]);
 
   function center(name: string) {
     pendingCenter.current = name;
@@ -94,19 +80,20 @@ export function UnifiedGraph({model, selected, onSelect}: {
       <div style={{width: width * zoom, height: height * zoom, position: 'relative', overflow: 'hidden'}}>
         <div style={{position: 'relative', width, height, transform: `scale(${zoom})`, transformOrigin: 'top left'}}>
           <svg width={width} height={height} style={{position: 'absolute', inset: 0}} aria-hidden="true">
-            {g.edges().map(edge => <polyline key={JSON.stringify(edge)} points={g.edge(edge).points.map((p: {x: number; y: number}) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#718379" strokeWidth={2}/>)}
+            {edges.map(edge => <g key={edge.id}><polyline points={edge.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke="#f5faf8" strokeWidth={6}/><polyline data-edge-kind={edge.kind} points={edge.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke={edge.kind==='partner'?'#b56344':'#427385'} strokeDasharray={edge.kind==='partner'?'6 3':undefined} strokeWidth={2}/></g>)}
           </svg>
           {model.families.map(family => {
-            const point = g.node('f:' + family.id);
-            if (family.label) return <div key={family.id} className="relationship-node" data-relationship-id={family.id}
-              style={{position:'absolute',left:point.x-120,top:point.y-point.height/2,width:240,height:point.height,overflow:'auto'}}>
+            const point = nodes.get('f:' + family.id);
+            if(!point) return null;
+            if (family.parents.length>1) return <div key={family.id} className="relationship-node" data-relationship-id={family.id}
+              style={{position:'absolute',left:point.x-point.width/2,top:point.y-point.height/2,width:point.width,height:point.height,overflow:'auto'}}>
               <strong>{family.label}</strong>
               {family.events?.map((event,index) => <div key={index}>{event}</div>)}
             </div>;
-            return <span key={family.id} title={family.parents.join(' + ')} style={{position: 'absolute', left: point.x - 5, top: point.y - 5, width: 10, height: 10, borderRadius: '50%', background: '#c4674d'}}/>;
+            return <span key={family.id} data-relationship-id={family.id} title={[family.label,...(family.events||[])].join(' · ')} style={{position: 'absolute', left: point.x - 4, top: point.y - 4, width: 8, height: 8, borderRadius: '50%', background: '#427385'}}/>;
           })}
           {model.people.map(name => {
-            const point = g.node('p:' + name);
+            const point = nodes.get('p:' + name)!;
             return <button type="button" key={name} data-person-id={name} className={`person-card${selected === name ? ' selected' : ''}`} aria-pressed={selected === name}
               style={{position: 'absolute', left: point.x - 92, top: point.y - 50, width: 184, height: 100, overflow: 'auto'}} onClick={() => onSelect(name)}>
               <span className="person-name">{displayName(name)}</span>

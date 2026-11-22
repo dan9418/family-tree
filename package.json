@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "test": "node test-family-layout.js && node --experimental-strip-types test-relationships.mjs && node --experimental-strip-types test-gedcomx.mjs",
+    "test": "node test-family-layout.js && node --experimental-strip-types test-relationships.mjs && node --experimental-strip-types test-gedcomx.mjs && node --experimental-strip-types test-unified-layout.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit"
