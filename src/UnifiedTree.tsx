@@ -1,7 +1,7 @@
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {Focus, Maximize, Search, Expand, Shrink} from 'lucide-react';
 import {dateYear} from './years';
-import {unifiedLayout} from './unifiedLayout';
+import {unifiedLayout, displayEdges} from './unifiedLayout';
 import {relationships, type FamilyData, type RelationshipGraph} from './relationships';
 
 export function UnifiedTree({data, selected, onSelect}: {
@@ -99,7 +99,7 @@ export function UnifiedGraph({model, selected, onSelect, onSelectRelationship}: 
       <div style={{width: width * zoom, height: height * zoom, position: 'relative', overflow: 'hidden'}}>
         <div style={{position: 'relative', width, height, transform: `scale(${zoom})`, transformOrigin: 'top left'}}>
           <svg width={width} height={height} style={{position: 'absolute', inset: 0}} aria-hidden="true">
-            {edges.map(edge => <g key={edge.id}><polyline points={edge.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke="#f5faf8" strokeWidth={6}/><polyline data-edge-kind={edge.kind} points={edge.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke={edge.kind==='partner'?'#b56344':'#427385'} strokeDasharray={edge.kind==='partner'?'6 3':undefined} strokeWidth={2}/></g>)}
+            {displayEdges(edges).map(edge => <polyline key={edge.id} data-edge-kind={edge.kind} points={edge.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke={edge.kind==='partner'?'#b56344':'#427385'} strokeDasharray={edge.kind==='partner'?'6 3':undefined} strokeWidth={2}/>)}
           </svg>
           {model.families.map(family => {
             const point = nodes.get('f:' + family.id);
@@ -113,7 +113,7 @@ export function UnifiedGraph({model, selected, onSelect, onSelectRelationship}: 
               <strong>{family.label}</strong>
               <div className="partnership-years">{family.events?.length ? family.events.map(event => dateYear(event) || '?').join(' / ') : 'Year unknown'}</div>
             </div>;
-            return <span key={family.id} data-relationship-id={family.id} title={[family.label,...(family.events||[])].join(' · ')} style={{position: 'absolute', left: point.x - 4, top: point.y - 4, width: 8, height: 8, borderRadius: '50%', background: '#427385'}}/>;
+            return <span key={family.id} data-relationship-id={family.id} hidden/>;
           })}
           {model.people.map(name => {
             const point = nodes.get('p:' + name)!;

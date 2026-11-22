@@ -5,6 +5,33 @@ type Point = {x:number;y:number};
 type Box = Point & {width:number;height:number};
 export type RoutedEdge = {id:string;kind:'partner'|'parent';points:Point[]};
 
+// Merge collinear strokes for display only; semantic edges remain individually testable.
+export function displayEdges(edges: RoutedEdge[]): RoutedEdge[] {
+  const result = edges.filter(e => e.kind === 'partner');
+  const lines = new Map<string, {horizontal:boolean; fixed:number; ranges:number[][]}>();
+  for (const edge of edges.filter(e => e.kind === 'parent')) {
+    for (let i=1;i<edge.points.length;i++) {
+      const a=edge.points[i-1], b=edge.points[i];
+      if (a.x===b.x && a.y===b.y) continue;
+      if (a.x!==b.x && a.y!==b.y) {result.push({id:`${edge.id}:${i}`,kind:'parent',points:[a,b]});continue;}
+      const horizontal=a.y===b.y, fixed=horizontal?a.y:a.x;
+      const key=JSON.stringify([horizontal,fixed]);
+      if (!lines.has(key)) lines.set(key,{horizontal,fixed,ranges:[]});
+      lines.get(key)!.ranges.push([Math.min(horizontal?a.x:a.y,horizontal?b.x:b.y),Math.max(horizontal?a.x:a.y,horizontal?b.x:b.y)]);
+    }
+  }
+  for (const [key,line] of lines) {
+    const merged:number[][]=[];
+    for (const range of line.ranges.sort((a,b)=>a[0]-b[0])) {
+      const last=merged[merged.length-1];
+      if(last && range[0]<=last[1]) last[1]=Math.max(last[1],range[1]);
+      else merged.push([...range]);
+    }
+    merged.forEach(([start,end],i)=>result.push({id:`stroke:${key}:${i}`,kind:'parent',points:line.horizontal?[{x:start,y:line.fixed},{x:end,y:line.fixed}]:[{x:line.fixed,y:start},{x:line.fixed,y:end}]}));
+  }
+  return result;
+}
+
 // Lay out partnership components as horizontal units, then rank their ancestry.
 export function unifiedLayout(model: RelationshipGraph) {
   const couples = model.families.filter(f => f.parents.length > 1);
@@ -82,14 +109,25 @@ export function unifiedLayout(model: RelationshipGraph) {
     });
   });
   let laneIndex=0;
+  const parentsByChild=new Map<string,Set<string>>();
+  for(const family of model.families) for(const child of family.children) {
+    if(!parentsByChild.has(child)) parentsByChild.set(child,new Set());
+    family.parents.forEach(parent=>parentsByChild.get(child)!.add(parent));
+  }
+  const buses=new Map<string,number>();
   for(const family of model.families) for(const parent of family.parents) for(const child of family.children) {
     const source=nodes.get('p:'+parent)!, target=nodes.get('p:'+child)!;
     const route=outer.edge({v:find(parent),w:find(child),name:JSON.stringify([family.id,parent,child])});
     const start={x:source.x,y:source.y+source.height/2};
     const end={x:target.x,y:target.y-target.height/2};
-    const middle=start.y+(end.y-start.y)*(0.35+(laneIndex++%7)*0.05);
+    const parents=[...parentsByChild.get(child)!].sort();
+    const sameRow=parents.every(id=>nodes.get('p:'+id)!.y===source.y);
+    const busKey=JSON.stringify([parents,start.y,end.y]);
+    if(!buses.has(busKey)) buses.set(busKey,start.y+(end.y-start.y)*(0.35+(laneIndex++%7)*0.05));
+    const middle=buses.get(busKey)!;
     let points:Point[];
-    if(route && route.points.length>3) {
+    if(!sameRow || (route && route.points.length>3)) {
+      if (!route) continue;
       const interior=route.points.slice(1,-1) as Point[];
       points=[start,{x:start.x,y:interior[0].y},...interior,{x:end.x,y:interior[interior.length-1].y},end];
     } else points=[start,{x:start.x,y:middle},{x:end.x,y:middle},end];

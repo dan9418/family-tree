@@ -1,6 +1,19 @@
 const {test, expect} = require('@playwright/test');
 const fs = require('node:fs');
 
+test('siblings share one clean ancestry connector', async ({page}, testInfo) => {
+  await page.goto('/?demo');
+  const gx='http://gedcomx.org/';
+  const data={persons:['a','b','c','d','e'].map((id,i)=>({id,names:[{nameForms:[{fullText:['Taylor Example','Morgan Example','Casey Example','Jordan Example','Riley Example'][i]}]}]})),relationships:[
+    {id:'ab',type:gx+'Couple',person1:{resource:'#a'},person2:{resource:'#b'}},
+    ...['c','d','e'].flatMap(child=>['a','b'].map(parent=>({id:parent+child,type:gx+'ParentChild',person1:{resource:'#'+parent},person2:{resource:'#'+child}})))
+  ]};
+  await page.locator('input[type=file]').setInputFiles({name:'fictional-siblings.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});
+  await expect(page.locator('[data-edge-kind="parent"]')).toHaveCount(6);
+  await page.getByRole('button',{name:'Fit entire tree',exact:true}).click();
+  await page.screenshot({path:testInfo.outputPath('siblings.png'),fullPage:true});
+});
+
 test('existing marriage and divorce dates preserve separate events', async ({page}, testInfo) => {
   await page.goto('/?demo');
   const couple = page.locator('[data-relationship-id="couple-alex-robin"]');
