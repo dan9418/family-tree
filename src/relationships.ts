@@ -1,4 +1,9 @@
 export type FamilyData = { root: string; parents: Record<string, string[]>; partners: string[][]; details?: Record<string, {born?: string|number; died?: string|number; notes?: string}> };
+export type RelationshipGraph = {
+  people: string[];
+  labels?: Record<string, string>;
+  families: {id: string; parents: string[]; children: string[]; label?: string; events?: string[]}[];
+};
 export function relationships(data: FamilyData) {
   const people = new Set<string>([data.root, ...Object.keys(data.details || {})]);
   const families = new Map<string, {id:string; parents:string[]; children:string[]}>();

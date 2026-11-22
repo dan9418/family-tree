@@ -39,6 +39,9 @@
 .gx-columns label { display: grid; gap: 6px; margin-bottom: 16px; }
 .gx-columns input, .gx-columns select { min-width: 0; width: 100%; padding: 10px; font: inherit; }
 .gx-columns li, .gx-editor .graph-toolbar span { overflow-wrap: anywhere; }
+.relationship-node { background: #edf4f1; border: 1px solid #718379; padding: 8px; font-size: .85rem; overflow-wrap: anywhere; }
+.relationship-node strong { display: block; margin-bottom: 6px; }
+.relationship-node div { margin-top: 6px; }
 
 fieldset { margin: 16px 0; border: 0; padding: 0; }
 fieldset label { margin-right: 18px; text-transform: capitalize; }

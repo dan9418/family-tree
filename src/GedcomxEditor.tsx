@@ -1,4 +1,6 @@
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {UnifiedGraph} from './UnifiedTree';
+import {gedcomxGraph} from './gedcomxGraph';
 import {createRoot} from 'react-dom/client';
 import {Download, FolderOpen, Undo2} from 'lucide-react';
 import {addCoupleEvent, fictionalDocument, GX, parseGedcomx, personName, renamePerson, serializeGedcomx, type Gedcomx} from './gedcomx';
@@ -21,6 +23,15 @@ function Editor() {
   const dirty = serializeGedcomx(data) !== baseline || name !== personName(person);
   const couples = data.relationships.filter(r => r.type === GX + 'Couple');
   const relationship = couples.find(r => r.id === relationshipId);
+  const graph = useMemo(() => gedcomxGraph(data), [data]);
+  function selectPerson(id: string) {
+    if(id === selected) return;
+    if(name !== personName(person) && !window.confirm('Discard the unapplied name edit?')) return;
+    setSelected(id);
+    setName(personName(data.persons.find(p => p.id === id)!));
+    const couple = couples.find(r => r.person1.resource === '#' + id || r.person2.resource === '#' + id);
+    if(couple) setRelationshipId(couple.id);
+  }
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {if (dirty) {event.preventDefault(); event.returnValue = '';}};
     window.addEventListener('beforeunload', warn);
@@ -65,7 +76,7 @@ function Editor() {
     <p role="status">{message}</p>
     <div className="gx-columns">
       <section><h2>Person</h2>
-        <label>Person<select value={selected} onChange={event => {if(name !== personName(person) && !window.confirm('Discard the unapplied name edit?')) return;setSelected(event.target.value);setName(personName(data.persons.find(p => p.id === event.target.value)!));}}>{data.persons.map(p => <option key={p.id} value={p.id}>{personName(p)} ({p.id})</option>)}</select></label>
+        <label>Person<select value={selected} onChange={event => selectPerson(event.target.value)}>{data.persons.map(p => <option key={p.id} value={p.id}>{personName(p)} ({p.id})</option>)}</select></label>
         <form onSubmit={event => {event.preventDefault(); applyName();}}><label>Name<input value={name} required onChange={event => setName(event.target.value)}/></label><button type="submit" disabled={name === personName(person)}>Apply name</button></form>
       </section>
       <section><h2>Partnership history</h2>
@@ -78,6 +89,7 @@ function Editor() {
         </form>
       </section>
     </div>
+    <section aria-label="Document tree"><h2>Family tree</h2><UnifiedGraph model={graph} selected={selected} onSelect={selectPerson}/></section>
   </main>;
 }
 createRoot(document.getElementById('root')!).render(<Editor/>);
