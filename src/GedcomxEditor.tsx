@@ -6,14 +6,14 @@ import {Download, FolderOpen, Undo2} from 'lucide-react';
 import {addCoupleEvent, fictionalDocument, GX, parseGedcomx, personName, renamePerson, serializeGedcomx, type Gedcomx} from './gedcomx';
 import '../styles.css';
 
-function Editor() {
-  const [data, setData] = useState<Gedcomx>(() => structuredClone(fictionalDocument));
+function Editor({initial, initialFilename}: {initial: Gedcomx; initialFilename: string}) {
+  const [data, setData] = useState<Gedcomx>(() => structuredClone(initial));
   const [history, setHistory] = useState<Gedcomx[]>([]);
-  const [baseline, setBaseline] = useState(() => serializeGedcomx(fictionalDocument));
-  const [filename, setFilename] = useState('fictional-family.gedcomx.json');
-  const [selected, setSelected] = useState('alex');
-  const [name, setName] = useState('Alex Example');
-  const [relationshipId, setRelationshipId] = useState('couple-alex-robin');
+  const [baseline, setBaseline] = useState(() => serializeGedcomx(initial));
+  const [filename, setFilename] = useState(initialFilename);
+  const [selected, setSelected] = useState(initial.persons[0].id);
+  const [name, setName] = useState(personName(initial.persons[0]));
+  const [relationshipId, setRelationshipId] = useState(initial.relationships.find(r => r.type === GX + 'Couple')?.id || '');
   const [eventType, setEventType] = useState<'Marriage' | 'Divorce'>('Marriage');
   const [date, setDate] = useState('');
   const [message, setMessage] = useState('');
@@ -54,7 +54,7 @@ function Editor() {
     } catch(e) {setError(String(e));}
   }
   return <main className="app gx-editor">
-    <header className="page-header"><div><p className="eyebrow">Family Tree</p><h1>Family document</h1></div><a href="/">Tree viewer</a></header>
+    <header className="page-header"><div><p className="eyebrow">Family Tree</p><h1>Family document</h1></div><a href="/?legacy">Legacy viewer</a></header>
     <div className="graph-toolbar">
       <button type="button" onClick={() => openInput.current?.click()}><FolderOpen size={18}/> Open</button>
       <button type="button" onClick={save}><Download size={18}/> Save copy</button>
@@ -92,4 +92,23 @@ function Editor() {
     <section aria-label="Document tree"><h2>Family tree</h2><UnifiedGraph model={graph} selected={selected} onSelect={selectPerson}/></section>
   </main>;
 }
-createRoot(document.getElementById('root')!).render(<Editor/>);
+async function startEditor() {
+  const root = createRoot(document.getElementById('root')!);
+  let initial = fictionalDocument;
+  let initialFilename = 'fictional-family.gedcomx.json';
+  try {
+    if (!new URLSearchParams(location.search).has('demo')) {
+      const response = await fetch('/family-tree.gedcomx.json', {cache: 'no-store'});
+      if (response.ok && response.headers.get('content-type')?.includes('application/json')) {
+        initial = parseGedcomx(await response.text());
+        initialFilename = 'family-tree.gedcomx.json';
+      } else if (!response.ok && response.status !== 404) {
+        throw Error(`Could not load the local document (${response.status}).`);
+      }
+    }
+    root.render(<Editor initial={initial} initialFilename={initialFilename}/>);
+  } catch (error) {
+    root.render(<main className="app"><p role="alert">{String(error)}</p><a href="/?demo">Open fictional example</a></main>);
+  }
+}
+void startEditor();

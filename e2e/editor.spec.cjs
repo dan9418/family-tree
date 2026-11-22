@@ -3,10 +3,10 @@ const fs = require('node:fs');
 
 test('fictional edit, download, and reopen on desktop and mobile', async ({page}, testInfo) => {
   const privateRequests = [];
-  page.on('request', request => {if(new URL(request.url()).pathname === '/family-tree.json') privateRequests.push(request.url());});
+  page.on('request', request => {if(['/family-tree.json','/family-tree.gedcomx.json'].includes(new URL(request.url()).pathname)) privateRequests.push(request.url());});
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.goto('/?editor');
+  await page.goto('/?editor&demo');
   await page.getByLabel('Name', {exact:true}).fill('Alex Revised');
   await page.getByRole('button', {name:'Apply name'}).click();
   const tree = page.getByRole('region', {name:'Document tree'});
@@ -47,7 +47,7 @@ test('fictional edit, download, and reopen on desktop and mobile', async ({page}
 });
 
 test('duplicate names keep separate identities and undo restores the graph', async ({page}) => {
-  await page.goto('/?editor');
+  await page.goto('/?editor&demo');
   const tree = page.getByRole('region', {name:'Document tree'});
   await page.getByLabel('Name', {exact:true}).fill('Robin Sample');
   await page.getByRole('button', {name:'Apply name'}).click();

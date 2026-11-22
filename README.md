@@ -2,7 +2,9 @@
 
 ## Fictional GEDCOM X editor
 
-Open `/?editor` on the Vite server for the isolated editor. It starts with fictional people and never fetches the private family file. Open accepts GEDCOM X JSON with local person/relationship IDs and references; this is a supported-subset check, not a complete GEDCOM X standards validator.
+The default page (also `/?editor`) loads the ignored local `family-tree.gedcomx.json`, falling back to fictional people when it is absent. Use `/?demo` to explicitly load fictional data without requesting private files. The original viewer remains at `/?legacy`. Open accepts GEDCOM X JSON with local person/relationship IDs and references; this is a supported-subset check, not a complete GEDCOM X standards validator.
+
+Run `node --experimental-strip-types convert-legacy.mjs` to create a private GEDCOM X copy of `family-tree.json`. It refuses to overwrite an existing destination. Unknown `?` placeholders are omitted, parentage types are left unspecified, and partnerships do not imply marriage. The original file is preserved. Save copy downloads updates; it does not overwrite the local server file automatically.
 
 Edit a person's primary full name, select an existing couple, and append marriage/divorce facts. The unified tree updates after applying edits, adding events, undoing, or opening a file. Click a person in the tree to select them in the editor. Nodes use stable GEDCOM X IDs, so duplicate names remain separate people. Parent-child assertions are drawn independently of partnership history; the viewer does not infer parentage from marriage. Unrecognized relationship types remain in the saved document but are not drawn.
 
@@ -14,7 +16,7 @@ React and TypeScript UI powered by Vite, with an independent JavaScript family l
 
 Run `npm install`, then `npm run dev`. Open the local URL printed by Vite.
 
-The development page loads `family-tree.json` if present. This private file is ignored by Git and is not bundled in production builds. Without it, the page uses the fictional `family-tree.template.json`. The Open JSON input loads another file in browser memory without uploading or saving it.
+The legacy development page loads `family-tree.json` if present, otherwise the fictional `family-tree.template.json`. Both private data files are ignored by Git and are not bundled in production builds. File inputs load documents into browser memory without uploading them.
 
 Use `npm test` for the fictional layout fixtures, `npm run typecheck` for TypeScript, and `npm run build` for a production build in `dist`.
 
