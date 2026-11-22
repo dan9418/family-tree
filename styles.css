@@ -11,6 +11,48 @@
   --shadow: 0 18px 45px rgba(54, 44, 36, 0.12);
 }
 
+.unified-viewport {
+  overflow: auto;
+  height: 65vh;
+  min-height: 280px;
+  background: #f5faf8;
+  border: 1px solid #c7d5ce;
+}
+
+.graph-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 12px 0; }
+.graph-search { position: relative; flex: 1 1 240px; min-width: 0; }
+.search-field { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #718379; padding: 8px; }
+.search-field input { border: 0; min-width: 0; width: 100%; font: inherit; }
+.search-results { position: absolute; z-index: 10; background: white; border: 1px solid #718379; width: 100%; max-height: 240px; overflow: auto; }
+.search-results button { display: block; width: 100%; text-align: left; border: 0; padding: 10px; background: white; font: inherit; overflow-wrap: anywhere; cursor: pointer; }
+.search-results button:hover, .search-results button:focus-visible { background: #e3f0eb; }
+.search-results p { margin: 10px; }
+.graph-tool { width: 40px; height: 40px; display: grid; place-items: center; background: white; border: 1px solid #718379; border-radius: 4px; cursor: pointer; }
+.zoom-control { display: flex; align-items: center; gap: 6px; }
+.zoom-control input { width: 100px; }
+.zoom-control output { width: 44px; text-align: right; }
+
+.gx-editor h1 { font-size: 2rem; line-height: 1.2; }
+.gx-editor button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; font: inherit; cursor: pointer; }
+.gx-editor button:disabled { cursor: default; opacity: .5; }
+.gx-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 32px; }
+.gx-columns label { display: grid; gap: 6px; margin-bottom: 16px; }
+.gx-columns input, .gx-columns select { min-width: 0; width: 100%; padding: 10px; font: inherit; }
+.gx-columns li, .gx-editor .graph-toolbar span { overflow-wrap: anywhere; }
+.relationship-node { background: #edf4f1; border: 1px solid #718379; padding: 8px; font-size: .85rem; overflow-wrap: anywhere; }
+.relationship-node strong { display: block; margin-bottom: 6px; }
+.relationship-node div { margin-top: 6px; }
+.relationship-node[role=button] { cursor: pointer; }
+.relationship-node[role=button]:focus-visible { outline: 3px solid #427385; outline-offset: 3px; }
+.edit-dialog { width: min(900px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid #718379; border-radius: 8px; padding: 24px; background: #fff; color: var(--ink); }
+.edit-dialog::backdrop { background: rgb(20 35 30 / 45%); }
+.dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.dialog-header h2 { margin: 0; }
+.edit-dialog:not([open]) { display: none; }
+
+fieldset { margin: 16px 0; border: 0; padding: 0; }
+fieldset label { margin-right: 18px; text-transform: capitalize; }
+
 * {
   box-sizing: border-box;
 }
@@ -356,3 +398,16 @@ h2 {
     right: 76px;
   }
 }
+.tree-viewer:fullscreen {
+  display: flex;
+  flex-direction: column;
+  background: #f5faf8;
+  padding: 16px;
+  width: 100%;
+  height: 100%;
+}
+.tree-viewer:fullscreen .unified-viewport { flex: 1; min-height: 0; height: auto; }
+.unified-viewport .person-card { flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 6px; }
+.person-years { display: block; font-size: 13px; color: #526660; }
+.unified-viewport .relationship-node { text-align: center; padding: 8px; font-size: 12px; }
+.partnership-years { font-size: 12px; }
