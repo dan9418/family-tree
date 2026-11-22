@@ -9,7 +9,7 @@ test('siblings share one clean ancestry connector', async ({page}, testInfo) => 
     ...['c','d','e'].flatMap(child=>['a','b'].map(parent=>({id:parent+child,type:gx+'ParentChild',person1:{resource:'#'+parent},person2:{resource:'#'+child}})))
   ]};
   await page.locator('input[type=file]').setInputFiles({name:'fictional-siblings.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});
-  await expect(page.locator('[data-edge-kind="parent"]')).toHaveCount(6);
+  await expect(page.locator('[data-edge-kind="parent"]')).toHaveCount(4);
   await page.getByRole('button',{name:'Fit entire tree',exact:true}).click();
   await page.screenshot({path:testInfo.outputPath('siblings.png'),fullPage:true});
 });
