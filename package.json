@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "test": "node test-family-layout.js && node --experimental-strip-types test-relationships.mjs",
+    "test": "node test-family-layout.js && node --experimental-strip-types test-relationships.mjs && node --experimental-strip-types test-gedcomx.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit"
@@ -14,5 +14,8 @@
     "react-dom": "^19.3.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
   }
 }

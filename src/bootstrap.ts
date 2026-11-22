@@ -1,2 +1,6 @@
 import '../family-layout.js';
-import './main';
+if (new URLSearchParams(location.search).has('editor')) {
+  void import('./GedcomxEditor');
+} else {
+  void import('./main');
+}

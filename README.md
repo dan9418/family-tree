@@ -1,5 +1,13 @@
 # Family Tree
 
+## Fictional GEDCOM X editor
+
+Open `/?editor` on the Vite server for the isolated editor. It starts with fictional people and never fetches the private family file. Open accepts GEDCOM X JSON with local person/relationship IDs and references; this is a supported-subset check, not a complete GEDCOM X standards validator.
+
+Edit a person's primary full name, select an existing couple, and append marriage/divorce facts. Save copy downloads a document; reopen that download to confirm the saved contents. Other fields are retained, except parsed name parts on the primary name form when its full name is replaced. Undo reverses applied changes. Download initiation cannot confirm disk persistence, so the unsaved indicator remains until a file is reopened.
+
+Run `npx playwright test` for the fictional browser round trip (requires installed Google Chrome). `npm test` also verifies a disk save/reopen, stable IDs, repeated marriages, and extension preservation. No real-data migration is performed.
+
 React and TypeScript UI powered by Vite, with an independent JavaScript family layout engine.
 
 Run `npm install`, then `npm run dev`. Open the local URL printed by Vite.
