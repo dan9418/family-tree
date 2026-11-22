@@ -94,6 +94,25 @@ export function addCoupleEvent(data: Gedcomx, relationshipId: string, type: 'Mar
   return next;
 }
 
+export function factDate(fact: Fact): string {
+  return fact.date?.original ?? (typeof fact.date?.formal === 'string' ? fact.date.formal : '');
+}
+
+export function updateCoupleEventDate(data: Gedcomx, relationshipId: string, index: number, value: string): Gedcomx {
+  const next = structuredClone(data);
+  const relationship = next.relationships.find(r => r.id === relationshipId);
+  if (!relationship || relationship.type !== GX + 'Couple') throw Error('Select a couple relationship.');
+  const fact = Number.isInteger(index) && index >= 0 ? relationship.facts?.[index] : undefined;
+  if (!fact || ![GX + 'Marriage', GX + 'Divorce'].includes(fact.type)) throw Error('Select a marriage or divorce event.');
+  if (value === factDate(fact)) return next;
+  const date = {...fact.date};
+  delete date.original; delete date.formal;
+  if (value.trim()) date.original = value.trim();
+  if (Object.keys(date).length) fact.date = date;
+  else delete fact.date;
+  return next;
+}
+
 export const fictionalDocument: Gedcomx = {
   persons: [
     {id: 'alex', names: [{nameForms: [{fullText: 'Alex Example'}]}]},

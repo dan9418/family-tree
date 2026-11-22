@@ -1,6 +1,46 @@
 const {test, expect} = require('@playwright/test');
 const fs = require('node:fs');
 
+test('existing marriage and divorce dates preserve separate events', async ({page}, testInfo) => {
+  await page.goto('/?demo');
+  const couple = page.locator('[data-relationship-id="couple-alex-robin"]');
+  await couple.click();
+  for (const [type,date] of [['Marriage','2000'],['Divorce','2010'],['Marriage','2015']]) {
+    await page.getByRole('combobox',{name:'Event',exact:true}).selectOption(type);
+    await page.getByLabel('Date',{exact:true}).fill(date);
+    await page.getByRole('button',{name:'Add event',exact:true}).click();
+  }
+  await page.getByRole('button',{name:'Edit marriage date 3',exact:true}).click();
+  await page.getByLabel('Marriage date',{exact:true}).fill('2016');
+  await page.getByRole('button',{name:'Apply event date',exact:true}).click();
+  await expect(couple).toContainText('2000 / 2010 / 2016');
+  await page.getByRole('button',{name:'Close editor'}).click();
+  await page.getByRole('button',{name:'Undo last applied change'}).click();
+  await expect(couple).toContainText('2000 / 2010 / 2015');
+  await couple.click();
+  await page.getByRole('button',{name:'Edit divorce date 2',exact:true}).click();
+  await page.getByLabel('Divorce date',{exact:true}).fill('2011');
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.getByRole('button',{name:'Close editor'}).click();
+  await expect(page.getByLabel('Divorce date',{exact:true})).toHaveValue('2011');
+  await page.getByRole('button',{name:'Apply event date',exact:true}).click();
+  await expect(couple).toContainText('2000 / 2011 / 2015');
+  await page.getByRole('button',{name:'Close editor'}).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button',{name:'Save copy'}).click();
+  const path = testInfo.outputPath('fictional-events.json');
+  await (await download).saveAs(path);
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('input[type=file]').setInputFiles(path);
+  await couple.click();
+  await expect(page.getByRole('listitem')).toHaveText(['Marriage: 2000','Divorce: 2011','Marriage: 2015']);
+  await page.getByRole('button',{name:'Edit divorce date 2',exact:true}).click();
+  await expect(page.getByLabel('Divorce date',{exact:true})).toHaveValue('2011');
+  await page.getByLabel('Divorce date',{exact:true}).fill('');
+  await page.getByRole('button',{name:'Apply event date',exact:true}).click();
+  await expect(page.getByRole('listitem').nth(1)).toHaveText('Divorce: Date unknown');
+});
+
 test('person dates edit, undo, discard, and file round trip', async ({page}, testInfo) => {
   await page.goto('/?demo');
   const alex = page.locator('[data-person-id="alex"]');

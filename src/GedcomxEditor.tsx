@@ -2,7 +2,8 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {UnifiedGraph} from './UnifiedTree';
 import {gedcomxGraph} from './gedcomxGraph';
 import {createRoot} from 'react-dom/client';
-import {Download, FolderOpen, Undo2, X} from 'lucide-react';
+import {Download, FolderOpen, Undo2, X, Pencil} from 'lucide-react';
+import {factDate, updateCoupleEventDate} from './gedcomx';
 import {addCoupleEvent, fictionalDocument, GX, parseGedcomx, personName, personDate, updatePersonDates, renamePerson, serializeGedcomx, type Gedcomx, type Person} from './gedcomx';
 import '../styles.css';
 
@@ -19,6 +20,13 @@ function Editor({initial, initialFilename}: {initial: Gedcomx; initialFilename: 
   const [relationshipId, setRelationshipId] = useState(initial.relationships.find(r => r.type === GX + 'Couple')?.id || '');
   const [eventType, setEventType] = useState<'Marriage' | 'Divorce'>('Marriage');
   const [date, setDate] = useState('');
+  const [eventEdit, setEventEdit] = useState<{relationshipId: string; index: number; value: string; original: string} | null>(null);
+  const eventChanged = !!eventEdit && eventEdit.value !== eventEdit.original;
+  function discardEventEdit() {
+    if (eventChanged && !window.confirm('Discard the unapplied event date edit?')) return false;
+    setEventEdit(null);
+    return true;
+  }
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const openInput = useRef<HTMLInputElement>(null);
@@ -26,7 +34,8 @@ function Editor({initial, initialFilename}: {initial: Gedcomx; initialFilename: 
   const nameInput = useRef<HTMLInputElement>(null);
   const eventInput = useRef<HTMLSelectElement>(null);
   function closeDialog() {
-    if ((name !== personName(person) || datesChanged || date.trim()) && !window.confirm('Discard unapplied edits?')) return;
+    if ((name !== personName(person) || datesChanged || date.trim() || eventChanged) && !window.confirm('Discard unapplied edits?')) return;
+    setEventEdit(null);
     setName(personName(person)); resetDates(person); setDate(''); setError('');
     dialog.current?.close();
   }
@@ -45,13 +54,14 @@ function Editor({initial, initialFilename}: {initial: Gedcomx; initialFilename: 
   }
   const person = data.persons.find(p => p.id === selected)!;
   const datesChanged = birth !== personDate(person, 'Birth') || death !== personDate(person, 'Death');
-  const dirty = serializeGedcomx(data) !== baseline || name !== personName(person) || datesChanged || !!date.trim();
+  const dirty = serializeGedcomx(data) !== baseline || name !== personName(person) || datesChanged || !!date.trim() || eventChanged;
   const couples = data.relationships.filter(r => r.type === GX + 'Couple');
   const relationship = couples.find(r => r.id === relationshipId);
   const graph = useMemo(() => gedcomxGraph(data), [data]);
   function selectPerson(id: string) {
     if(id === selected) return;
-    if((name !== personName(person) || datesChanged) && !window.confirm('Discard unapplied person edits?')) return;
+    if((name !== personName(person) || datesChanged || eventChanged) && !window.confirm('Discard unapplied person or event edits?')) return;
+    setEventEdit(null);
     setSelected(id);
     setName(personName(data.persons.find(p => p.id === id)!));
     resetDates(data.persons.find(p => p.id === id)!);
@@ -97,6 +107,7 @@ function Editor({initial, initialFilename}: {initial: Gedcomx; initialFilename: 
           setData(next); setBaseline(serializeGedcomx(next)); setHistory([]); setFilename(file.name);
           setSelected(next.persons[0].id); setName(personName(next.persons[0]));
           resetDates(next.persons[0]);
+          setEventEdit(null);
           setRelationshipId(next.relationships.find(r => r.type === GX + 'Couple')?.id || '');
           setDate(''); setError(''); setMessage('File opened.');
         } catch(e) {setError(String(e));}
@@ -118,8 +129,24 @@ function Editor({initial, initialFilename}: {initial: Gedcomx; initialFilename: 
         </form>
       </section>
       <section><h2>Partnership history</h2>
-        <label>Couple<select value={relationshipId} onChange={event => setRelationshipId(event.target.value)} disabled={!couples.length}>{!couples.length && <option value="">No couples recorded</option>}{couples.map(r => <option key={r.id} value={r.id}>{resolveName(r.person1.resource)} + {resolveName(r.person2.resource)} ({r.id})</option>)}</select></label>
-        <ol>{relationship?.facts?.map((fact, index) => <li key={index}>{fact.type.startsWith(GX) ? fact.type.slice(GX.length) : fact.type}: {fact.date?.original || 'Date unknown'}</li>)}</ol>
+        <label>Couple<select value={relationshipId} onChange={event => {if (discardEventEdit()) setRelationshipId(event.target.value);}} disabled={!couples.length}>{!couples.length && <option value="">No couples recorded</option>}{couples.map(r => <option key={r.id} value={r.id}>{resolveName(r.person1.resource)} + {resolveName(r.person2.resource)} ({r.id})</option>)}</select></label>
+        <ol>{relationship?.facts?.map((fact, index) => {
+          const type = fact.type.startsWith(GX) ? fact.type.slice(GX.length) : fact.type;
+          const editing = eventEdit?.relationshipId === relationshipId && eventEdit.index === index;
+          return <li key={index}>
+            <span>{type}: {factDate(fact) || 'Date unknown'}</span>
+            {[GX + 'Marriage', GX + 'Divorce'].includes(fact.type) && !editing && <button type="button" title={`Edit ${type.toLowerCase()} date ${index + 1}`} aria-label={`Edit ${type.toLowerCase()} date ${index + 1}`} onClick={() => {
+              if (discardEventEdit()) setEventEdit({relationshipId, index, value: factDate(fact), original: factDate(fact)});
+            }}><Pencil size={14}/></button>}
+            {editing && <form onSubmit={event => {event.preventDefault(); try {
+              change(updateCoupleEventDate(data, eventEdit.relationshipId, eventEdit.index, eventEdit.value)); setEventEdit(null);
+            } catch(e) {setError(String(e));}}}>
+              <label>{type} date<input autoFocus value={eventEdit.value} onChange={event => setEventEdit({...eventEdit, value: event.target.value})}/></label>
+              <button type="submit" disabled={!eventChanged}>Apply event date</button>
+              <button type="button" onClick={discardEventEdit}>Cancel</button>
+            </form>}
+          </li>;
+        })}</ol>
         <form onSubmit={event => {event.preventDefault(); try {change(addCoupleEvent(data, relationshipId, eventType, date));setDate('');} catch(e) {setError(String(e));}}}>
           <label>Event<select ref={eventInput} value={eventType} onChange={event => setEventType(event.target.value as 'Marriage' | 'Divorce')}><option>Marriage</option><option>Divorce</option></select></label>
           <label>Date<input value={date} placeholder="e.g. 2000 or about June 2000" onChange={event => setDate(event.target.value)}/></label>
